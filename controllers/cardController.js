@@ -1,5 +1,4 @@
 const Card = require("../models/cardModel");
-const User = require('../models/userModel');
 const fs = require('fs');
 
 const saveCard = async (req, res) => {
@@ -7,9 +6,10 @@ const saveCard = async (req, res) => {
         const { first_name, last_name, company_name, designation, email, phonecode, phonenumber, country, social_links, enable_whatsapp, whatsapp_number, whatsapp_message, isPublished } = req.body;
         
         const profileimage = req.file ? req.file.path : null;
+        const userId = req.user.ref === "0" ? req.user.userId : req.user.ref;
         const newCard = new Card({
             profileimage: profileimage,
-            first_name, last_name, company_name, designation, email, phonecode, phonenumber, country, social_links: JSON.parse(social_links), enable_whatsapp, whatsapp_number, whatsapp_message, userId: req.user.userId, isPublished: isPublished
+            first_name, last_name, company_name, designation, email, phonecode, phonenumber, country, social_links: JSON.parse(social_links), enable_whatsapp, whatsapp_number, whatsapp_message, userId: userId, isPublished: isPublished
         });
         await newCard.save();
         res.status(200).json({ message: 'Card saved successfully', cardId: newCard._id });
@@ -20,14 +20,13 @@ const saveCard = async (req, res) => {
 
 const getCards = async (req, res) => {
     try {
-        const userId = req.user.userId;
-        const user = await User.findById(userId);
-        if (user.ref === "0") {
-            const cards = await Card.find({ userId: userId });
+        if (req.user.ref === "0") {
+            const cards = await Card.find({ userId: req.user.userId.toString() });
+            return res.status(200).json({ message: "Cards fetched", cards: cards });
+        } else {
+            const cards = await Card.find({ userId: req.user.ref.toString() });
             return res.status(200).json({ message: "Cards fetched", cards: cards });
         }
-        const cards = await Card.find({ userId: user.ref });
-        res.status(200).json({ message: "Cards fetched", cards: cards });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching all cards', error: error.message });
     }
@@ -71,6 +70,11 @@ const getCard = async (req, res) => {
 const deleteCard = async (req, res) => {
     try {
         const { id } = req.params;
+        const card = await Card.findById(id);
+        const oldImagePath = card.profileimage;
+        if (oldImagePath && fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+        }
         await Card.findByIdAndDelete(id);
         res.status(200).json({ message: "Card deleted successfully" });
     } catch (error) {

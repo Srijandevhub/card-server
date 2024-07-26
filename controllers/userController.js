@@ -2,6 +2,7 @@ const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.SECRET;
+const fs = require('fs');
 
 const signup = async (req, res) => {
     try {
@@ -158,6 +159,71 @@ const updateUser = async (req, res) => {
     }
 }
 
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await User.findByIdAndDelete(id);
+        res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting user', error: error });
+    }
+}
+
+const removeProfileImage = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const user = await User.findById(userId);
+        const oldImagePath = user.image;
+        if (oldImagePath && fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+        }
+        await User.findByIdAndUpdate(userId, {
+            image: null
+        });
+        res.status(200).json({ message: 'Profileimage removed successfully'});
+    } catch (error) {
+        res.status(500).json({ message: 'Error removing image', error: error.message });
+    }
+}
+
+const updateSingleUser = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { name, companyname, designation, email, phonecode, phonenumber, country  } = req.body;
+        const user = await User.findById(userId);
+        if (req.file) {
+            const oldImagePath = user.image;
+            if (oldImagePath && fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+            const image = req.file.path;
+            await User.findByIdAndUpdate(userId, {
+                image: image,
+                name : name,
+                companyname: companyname,
+                jobtitle : designation,
+                email : email,
+                phonecode : phonecode,
+                phonenumber : phonenumber,
+                country : country
+            })
+        } else {
+            await User.findByIdAndUpdate(userId, {
+                name : name,
+                companyname: companyname,
+                jobtitle : designation,
+                email : email,
+                phonecode : phonecode,
+                phonenumber : phonenumber,
+                country : country
+            })
+        }
+        res.status(200).json({ message: "User updated successfully" });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating user', error: error.message });
+    }
+}
+
 const firstLogin = async (req, res) => {
     try {
         const { currPassword, newPassword } = req.body;
@@ -178,4 +244,4 @@ const firstLogin = async (req, res) => {
     }
 }
 
-module.exports = { signup, login, logout, getUser, addUser, getUsers, getSelectedUser, updateUser, firstLogin };
+module.exports = { signup, login, logout, getUser, addUser, getUsers, getSelectedUser, updateUser, firstLogin, removeProfileImage, updateSingleUser, deleteUser };

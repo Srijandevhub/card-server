@@ -17,6 +17,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api/user", require("./routes/userRoute"));
 app.use("/api/card", require("./routes/cardRoute"));
 app.use("/api/dashboard", require('./routes/dashboardRoute'));
+app.use("/api/request", require('./routes/requestRoute'));
 
 app.get('/api/protected', authenticateToken, (req, res) => {
     res.status(200).json({ message: 'This is a protected route', user: req.user });
